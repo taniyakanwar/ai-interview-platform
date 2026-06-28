@@ -6,11 +6,11 @@ import { verifyToken, JwtPayload } from "../utils/jwt.utils";
 
 // Extend express's Request type to include a 'user' field
 // By default, req.user doesn't exist in express — we're adding it ourselves
+// Tell TypeScript that Passport's User type IS our JwtPayload
+// This merges our type with Passport's existing declaration — no conflict
 declare global {
   namespace Express {
-    interface Request {
-      user?: JwtPayload; // after middleware runs, req.user will have userId, email, role
-    }
+    interface User extends JwtPayload {}
   }
 }
 

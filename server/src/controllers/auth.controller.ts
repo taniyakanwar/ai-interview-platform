@@ -81,3 +81,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// ─── GET ME ─────────────────────────────────────────────────
+// This runs AFTER protect middleware — so req.user is already verified and populated
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // 1. Get the userId from req.user — protect middleware attached this earlier
+    const userId = (req.user as any)?.userId;
+
+    // 2. Fetch the full user record from DB using that userId
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      // Only return these fields — never send password back to frontend
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatar: true,
+        isVerified: true,
+        createdAt: true,
+      },
+    });
+
+    // 3. If no user found (edge case — token valid but user deleted from DB)
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    // 4. Return the user data
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("GetMe error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
