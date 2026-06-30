@@ -27,6 +27,7 @@ router.get(
 
   // This runs only if passport.authenticate succeeded — req.user is now the user from DB
   (req, res) => {
+    
     // 1. Get the user object that passport attached to req.user
     const user = req.user as any;
 
@@ -37,9 +38,23 @@ router.get(
       role: user.role,
     });
 
-    // 3. Redirect to frontend with token in URL query param
-    // Frontend will extract this token and store it
-    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+    // 3. Build a clean user object to send to the frontend
+    // We only send safe, public fields — never send passwords or sensitive data
+    const userPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+    };
+
+    // 4. Convert the user object to a JSON string, then URL-encode it
+    // URL-encoding is necessary because the object contains special characters
+    // like { } " that would break the URL if sent raw
+    const userParam = encodeURIComponent(JSON.stringify(userPayload));
+
+    // 5. Redirect to frontend with BOTH token and user data in the URL
+    // Frontend's GoogleCallback page will read both of these
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}&user=${userParam}`);
   }
 );
 
