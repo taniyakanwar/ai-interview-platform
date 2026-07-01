@@ -61,9 +61,15 @@ passport.use(
           });
         }
 
-        // 5. Map prisma user to JwtPayload shape — id becomes userId
-        // This is needed because our JwtPayload uses userId, not id
-        return done(null, { userId: user.id, email: user.email, role: user.role });
+        // 5. Pass the full user object to the next handler
+// We include name and avatar so the frontend can display them properly
+return done(null, {
+  userId: user.id,
+  email: user.email,
+  role: user.role,
+  name: user.name,       // ← add this
+  avatar: user.avatar ?? undefined, // convert null to undefined so TypeScript is happy
+});
 
       } catch (error) {
         // If anything went wrong, pass the error to passport
