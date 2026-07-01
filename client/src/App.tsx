@@ -13,6 +13,18 @@ import Layout from "@/components/Layout"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import GoogleCallback from "@/pages/GoogleCallback"
 
+
+// NEW —  placeholder pages for dashboard
+import CodingPractice from "@/pages/CodingPractice"
+import AIDoubtSolver from "@/pages/AIDoubtSolver"
+import ResumeAnalyzer from "@/pages/ResumeAnalyzer"
+import InterviewSimulator from "@/pages/InterviewSimulator"
+import RoadmapGenerator from "@/pages/RoadmapGenerator"
+import Notes from "@/pages/Notes"
+import SearchPage from "@/pages/SearchPage"
+import Profile from "@/pages/Profile"
+import AdminPanel from "@/pages/AdminPanel"
+
 function App() {
   return (
     // BrowserRouter enables navigation between pages without full page reloads
@@ -47,6 +59,107 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/coding-practice"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CodingPractice />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/doubt-solver"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AIDoubtSolver />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resume-analyzer"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ResumeAnalyzer />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/interview-simulator"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InterviewSimulator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/roadmap"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoadmapGenerator />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/notes"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Notes />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SearchPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Profile />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminPanel />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+
+
         </Routes>
 
       </AuthProvider>
