@@ -9,6 +9,7 @@ import { AuthProvider } from "@/context/AuthContext"
 import Login from "@/pages/Login"
 import Register from "@/pages/Register"
 import Dashboard from "@/pages/Dashboard"
+import Layout from "@/components/Layout"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import GoogleCallback from "@/pages/GoogleCallback"
 
@@ -35,11 +36,14 @@ function App() {
 
           {/* /dashboard → show Dashboard page (we'll protect this later) */}
           {/* Dashboard is now protected — wrapped in ProtectedRoute */}
+          {/* All protected pages share the same Layout (sidebar + content) */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <Layout>
+                  <Dashboard />
+                </Layout>
               </ProtectedRoute>
             }
           />
