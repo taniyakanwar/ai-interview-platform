@@ -2,6 +2,10 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -24,10 +28,73 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  createdProblems Problem[]     @relation("UserCreatedProblems")
+  problemProgress UserProblem[] @relation("UserProgress")
+
   @@map("users")
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  ATTEMPTED
+  SOLVED
+}
+
+enum Confidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Problem {
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  difficulty    Difficulty
+  tags          String[]
+  summary       String
+  examples      Json
+  constraints   String?
+  hints         String[]
+  estimatedTime Int?
+  sourceUrl     String?
+  isCurated     Boolean    @default(false)
+  createdById   String?
+  createdBy     User?      @relation("UserCreatedProblems", fields: [createdById], references: [id])
+  createdAt     DateTime   @default(now())
+
+  userProgress  UserProblem[]
+
+  @@map("problems")
+}
+
+model UserProblem {
+  id           String          @id @default(cuid())
+  userId       String
+  problemId    String
+  status       ProgressStatus  @default(NOT_STARTED)
+  starred      Boolean         @default(false)
+  confidence   Confidence?
+  notes        String?
+  attemptCount Int             @default(0)
+  lastSolved   DateTime?
+  nextRevision DateTime?
+  updatedAt    DateTime        @updatedAt
+
+  user         User            @relation("UserProgress", fields: [userId], references: [id])
+  problem      Problem         @relation(fields: [problemId], references: [id])
+
+  @@unique([userId, problemId])
+  @@map("user_problems")
 }
