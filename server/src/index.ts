@@ -17,6 +17,10 @@ import passport from "./config/passport";
 import authRoutes from "./routes/auth.routes";
 import googleRoutes from "./routes/google.routes";
 
+
+
+import problemRoutes from "./routes/problem.routes";
+
 // Create the express app instance
 const app = express();
 
@@ -32,6 +36,9 @@ app.use(express.json());
 
 // Initialize passport — required before using any passport.authenticate calls
 app.use(passport.initialize());
+
+//problem
+app.use("/api/problems", problemRoutes);
 
 // ─── ROUTES ───────────────────────────────────────────────
 // Health check route — just to confirm server is alive
