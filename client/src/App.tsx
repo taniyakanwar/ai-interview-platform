@@ -16,6 +16,7 @@ import GoogleCallback from "@/pages/GoogleCallback"
 
 // NEW —  placeholder pages for dashboard
 import CodingPractice from "@/pages/CodingPractice"
+import ProblemDetail from "@/pages/ProblemDetail"
 import AIDoubtSolver from "@/pages/AIDoubtSolver"
 import ResumeAnalyzer from "@/pages/ResumeAnalyzer"
 import InterviewSimulator from "@/pages/InterviewSimulator"
@@ -65,6 +66,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CodingPractice />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/problems/:slug"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProblemDetail />
                 </Layout>
               </ProtectedRoute>
             }
