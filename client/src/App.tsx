@@ -2,10 +2,11 @@
 // This is the main file that defines all the routes (pages) of our app
 // Think of it like a table of contents — each URL maps to a component
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route,  } from "react-router-dom"
 import { AuthProvider } from "@/context/AuthContext"
 
 // Pages — we'll create these one by one
+import Landing from "@/pages/Landing"
 import Login from "@/pages/Login"
 import Register from "@/pages/Register"
 import Dashboard from "@/pages/Dashboard"
@@ -36,8 +37,8 @@ function App() {
 
         <Routes>
           {/* / → redirect to /login by default */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
+          {/* / → show Landing page as the entry point */}
+          <Route path="/" element={<Landing />} />
           {/* /login → show Login page */}
           <Route path="/login" element={<Login />} />
 

@@ -26,3 +26,29 @@ export async function getProblemBySlug(slug: string): Promise<Problem> {
   const response = await api.get<{ problem: Problem }>(`/problems/${slug}`);
   return response.data.problem;
 }
+
+
+// Updates a problem's progress (starred and/or status) for the current user.
+// Called when the user clicks the star icon or cycles the status icon.
+// Backend route: PATCH /api/problems/:id/progress
+export async function updateProgress(
+  problemId: string,
+  updates: { starred?: boolean; status?: "NOT_STARTED" | "ATTEMPTED" | "SOLVED" }
+): Promise<void> {
+  await api.patch(`/problems/${problemId}/progress`, updates);
+}
+
+
+
+// Creates a new user-added problem (private, not curated).
+// Backend route: POST /api/problems
+export async function createProblem(payload: {
+  title: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  summary: string;
+  tags?: string[];
+  sourceUrl?: string;
+}): Promise<Problem> {
+  const response = await api.post<{ problem: Problem }>("/problems", payload);
+  return response.data.problem;
+}

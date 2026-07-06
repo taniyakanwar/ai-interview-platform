@@ -123,6 +123,40 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+
+/* ---------- Orbit animation for Landing page ---------- */
+/* This creates circles that revolve around an invisible center point,
+   like planets around a sun, while staying upright (not spinning themselves) */
+
+/* ---------- Orbit animation for Landing page ---------- */
+/* Creates circles that revolve around an invisible center point,
+   like planets around a sun, while staying upright (not spinning themselves) */
+
+/* ---------- Orbit animation for Landing page ---------- */
+/* Creates circles that revolve around an invisible center point,
+   like planets around a sun, while staying upright (not spinning themselves) */
+
+@keyframes orbit-revolve {
+  from {
+    /* Start at --start-angle, push out by --orbit-radius,
+       then counter-rotate by the SAME angle so the icon stays upright */
+    transform: rotate(var(--start-angle)) translateX(var(--orbit-radius)) rotate(calc(-1 * var(--start-angle)));
+  }
+  to {
+    /* One full 360° later — icon completes one orbit and stays upright throughout */
+    transform: rotate(calc(var(--start-angle) + 360deg)) translateX(var(--orbit-radius)) rotate(calc(-1 * (var(--start-angle) + 360deg)));
+  }
+}
+
+.orbit-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Center the icon circle on the pivot point (half of its 160px size) */
+  margin-top: -80px;
+  margin-left: -80px;
+  animation: orbit-revolve 20s linear infinite;
+}
 @layer base {
   * {
     @apply border-border outline-ring/50;

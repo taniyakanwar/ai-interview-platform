@@ -33,7 +33,7 @@ router.get(
 
     // 2. Sign a JWT token for this user
     const token = signToken({
-      userId: user.id,
+      userId: user.userId,
       email: user.email,
       role: user.role,
     });
@@ -41,7 +41,7 @@ router.get(
     // 3. Build a clean user object to send to the frontend
     // We only send safe, public fields — never send passwords or sensitive data
     const userPayload = {
-      id: user.id,
+      id: user.userId,
       email: user.email,
       name: user.name,
       avatar: user.avatar,

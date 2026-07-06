@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useProblem } from "@/hooks/useProblem";
-import { ArrowLeft, Lightbulb } from "lucide-react";
+import { ArrowLeft, Lightbulb, ExternalLink } from "lucide-react";
 
 const difficultyStyle: Record<string, string> = {
   EASY: "bg-[#9CB68A] text-[#2D3B2A]",
@@ -51,15 +51,32 @@ export default function ProblemDetail() {
         Back to Problems
       </Link>
 
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-3xl font-['Fraunces'] text-[#2D3B2A]">
-          {problem.title}
-        </h1>
-        <span
-          className={`text-xs font-semibold px-2 py-1 rounded-full ${difficultyStyle[problem.difficulty]}`}
-        >
-          {problem.difficulty}
-        </span>
+      {/* Title + difficulty badge on the left, "Open Problem" link on the right */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-['Fraunces'] text-[#2D3B2A]">
+            {problem.title}
+          </h1>
+          <span
+            className={`text-xs font-semibold px-2 py-1 rounded-full ${difficultyStyle[problem.difficulty]}`}
+          >
+            {problem.difficulty}
+          </span>
+        </div>
+
+        {/* Only render the button if this problem actually has a sourceUrl —
+            curated/seeded problems might not have one, so we don't want a dead button */}
+        {problem.sourceUrl && (
+          
+          <a href={problem.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-[#2D3B2A] text-[#FAF7F2] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2D3B2A]/90 transition-colors"
+          >
+            Open Problem
+            <ExternalLink size={16} />
+          </a>
+        )}
       </div>
 
       <div className="flex gap-1 flex-wrap mb-6">
