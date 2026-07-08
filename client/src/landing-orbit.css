@@ -1,0 +1,79 @@
+.orbit-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+  animation: orbit-spin 24s linear infinite;
+}
+
+.orbit-item:nth-child(odd) {
+  animation-duration: 29s;
+}
+
+@keyframes orbit-spin {
+  from {
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--start-angle))
+      translateX(var(--orbit-radius))
+      rotate(var(--counter-angle));
+  }
+
+  to {
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(var(--start-angle) + 360deg))
+      translateX(var(--orbit-radius))
+      rotate(calc(var(--counter-angle) - 360deg));
+  }
+}
+
+.landing-dashboard-panel {
+  border: 1px solid rgb(45 59 42 / 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.76), rgb(250 247 242 / 0.9)),
+    radial-gradient(circle at top right, rgb(156 182 138 / 0.32), transparent 36%);
+  box-shadow: 0 24px 70px rgb(45 59 42 / 0.14);
+  padding: 28px;
+  backdrop-filter: blur(18px);
+}
+
+.landing-feature-card {
+  min-height: 280px;
+  border: 1px solid rgb(45 59 42 / 0.1);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.56);
+  padding: 24px;
+  box-shadow: 0 18px 46px rgb(45 59 42 / 0.08);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.landing-feature-card:hover {
+  transform: translateY(-4px);
+  background: rgb(255 255 255 / 0.78);
+  box-shadow: 0 24px 60px rgb(45 59 42 / 0.12);
+}
+
+.landing-step-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgb(250 247 242 / 0.14);
+  border-radius: 8px;
+  background: rgb(250 247 242 / 0.08);
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .orbit-item {
+    opacity: 0.78;
+  }
+
+  .landing-step-row {
+    align-items: flex-start;
+  }
+}

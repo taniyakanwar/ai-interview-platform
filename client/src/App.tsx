@@ -2,10 +2,10 @@
 // This is the main file that defines all the routes (pages) of our app
 // Think of it like a table of contents — each URL maps to a component
 
-import { BrowserRouter, Routes, Route,  } from "react-router-dom"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { AuthProvider } from "@/context/AuthContext"
 
-// Pages — we'll create these one by one
+// Pages
 import Landing from "@/pages/Landing"
 import Login from "@/pages/Login"
 import Register from "@/pages/Register"
@@ -14,43 +14,35 @@ import Layout from "@/components/Layout"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import GoogleCallback from "@/pages/GoogleCallback"
 
-
-// NEW —  placeholder pages for dashboard
 import CodingPractice from "@/pages/CodingPractice"
 import ProblemDetail from "@/pages/ProblemDetail"
 import AIDoubtSolver from "@/pages/AIDoubtSolver"
 import ResumeAnalyzer from "@/pages/ResumeAnalyzer"
 import InterviewSimulator from "@/pages/InterviewSimulator"
 import RoadmapGenerator from "@/pages/RoadmapGenerator"
-import Notes from "@/pages/Notes"
 import SearchPage from "@/pages/SearchPage"
 import Profile from "@/pages/Profile"
 import AdminPanel from "@/pages/AdminPanel"
+import NotePage from "@/pages/NotePage"
 
 function App() {
   return (
-    // BrowserRouter enables navigation between pages without full page reloads
     <BrowserRouter>
-
-      {/* AuthProvider wraps everything so all pages can access auth state */}
       <AuthProvider>
-
         <Routes>
-          {/* / → redirect to /login by default */}
           {/* / → show Landing page as the entry point */}
           <Route path="/" element={<Landing />} />
+
           {/* /login → show Login page */}
           <Route path="/login" element={<Login />} />
 
           {/* /register → show Register page */}
           <Route path="/register" element={<Register />} />
-           
-           {/* google sign in then loading then dashboard  */}
+
+          {/* google sign in then loading then dashboard */}
           <Route path="/auth/callback" element={<GoogleCallback />} />
 
-          {/* /dashboard → show Dashboard page (we'll protect this later) */}
-          {/* Dashboard is now protected — wrapped in ProtectedRoute */}
-          {/* All protected pages share the same Layout (sidebar + content) */}
+          {/* /dashboard → show Dashboard page */}
           <Route
             path="/dashboard"
             element={
@@ -61,6 +53,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coding-practice"
             element={
@@ -71,6 +64,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/problems/:slug"
             element={
@@ -126,12 +120,23 @@ function App() {
             }
           />
 
+          {/* ── Notes feature — single source of truth, properly protected + wrapped in Layout ── */}
           <Route
             path="/notes"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Notes />
+                  <NotePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notes/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <NotePage />
                 </Layout>
               </ProtectedRoute>
             }
@@ -169,11 +174,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-
-
         </Routes>
-
       </AuthProvider>
     </BrowserRouter>
   )

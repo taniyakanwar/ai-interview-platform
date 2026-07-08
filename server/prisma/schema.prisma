@@ -30,6 +30,7 @@ model User {
 
   createdProblems Problem[]     @relation("UserCreatedProblems")
   problemProgress UserProblem[] @relation("UserProgress")
+  notes     Note[]
 
   @@map("users")
 }
@@ -77,6 +78,7 @@ model Problem {
   userProgress  UserProblem[]
 
   @@map("problems")
+  notes         Note[]
 }
 
 model UserProblem {
@@ -97,4 +99,23 @@ model UserProblem {
 
   @@unique([userId, problemId])
   @@map("user_problems")
+}
+
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String   @db.Text
+  category  String?
+  problemId String?
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem   Problem? @relation(fields: [problemId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("notes")
 }

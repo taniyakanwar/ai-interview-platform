@@ -1,35 +1,28 @@
 // Layout.tsx
-// This is a wrapper component that combines the Sidebar + the page content
-// Every logged-in page (Dashboard, Coding Practice, etc.) will use this Layout
-// So the sidebar automatically appears on all of them without repeating code
-
-import { ReactNode } from "react"
+import { ReactNode, useState } from "react"
 import { motion } from "framer-motion"
 import Sidebar from "@/components/Sidebar"
 
-// children = whatever page content we pass inside <Layout>...</Layout>
 function Layout({ children }: { children: ReactNode }) {
+  // Collapsed state lives here, not in Sidebar — because both Sidebar's width
+  // AND the main content's width need to react to this same value
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   return (
-    // Full screen, horizontal flex — sidebar on left, content on right
     <div className="flex h-screen bg-[#FAF7F2] font-sans overflow-hidden">
 
-      {/* Left side — fixed sidebar */}
-      <Sidebar />
+      {/* Pass collapsed state + toggle function down to Sidebar */}
+      <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed((prev) => !prev)} />
 
-      {/* Right side — scrollable page content */}
-      {/* flex-1 makes this take up all remaining space after the sidebar */}
       <main className="flex-1 overflow-y-auto">
-
-        {/* Animate page content on every route change — fade + slide up */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}   // start invisible, slightly below
-          animate={{ opacity: 1, y: 0 }}    // animate to fully visible
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="h-full"
         >
           {children}
         </motion.div>
-
       </main>
     </div>
   )

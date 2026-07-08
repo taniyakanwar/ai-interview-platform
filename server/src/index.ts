@@ -17,7 +17,7 @@ import passport from "./config/passport";
 import authRoutes from "./routes/auth.routes";
 import googleRoutes from "./routes/google.routes";
 
-
+import noteRoutes from "./routes/note.routes";
 
 import problemRoutes from "./routes/problem.routes";
 
@@ -45,6 +45,9 @@ app.use("/api/problems", problemRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Server is running 🚀" });
 });
+
+app.use("/api/notes", noteRoutes);   // ← notes
+
 
 // Auth routes — /api/auth/register, /api/auth/login, /api/auth/me
 app.use("/api/auth", authRoutes);
