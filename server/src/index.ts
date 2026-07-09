@@ -21,6 +21,9 @@ import noteRoutes from "./routes/note.routes";
 
 import problemRoutes from "./routes/problem.routes";
 
+import uploadRoutes from "./routes/upload.routes";
+
+
 // Create the express app instance
 const app = express();
 
@@ -54,6 +57,9 @@ app.use("/api/auth", authRoutes);
 
 // Google OAuth routes — /api/auth/google, /api/auth/google/callback
 app.use("/api/auth", googleRoutes);
+
+app.use("/api/upload", uploadRoutes);
+
 
 // ─── START SERVER ─────────────────────────────────────────
 app.listen(PORT, () => {

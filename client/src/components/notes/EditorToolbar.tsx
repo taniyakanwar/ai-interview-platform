@@ -11,6 +11,8 @@ import {
   Code, Minus, Image as ImageIcon,
   Highlighter, Palette,
 } from "lucide-react"
+import axiosInstance from "@/api/axios" // same shared axios instance used elsewhere
+import { useState } from "react"
 
 interface EditorToolbarProps {
   editor: Editor
@@ -53,21 +55,40 @@ const FONT_SIZES = [
 
 function EditorToolbar({ editor }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
 
   // Triggered when user picks an image file - converts to base64 and inserts directly
   // NOTE: base64 inline images are simplest for now; if notes get image-heavy later,
   // swap this for real file upload to Cloudinary (you already have it from your stack) + insert URL instead
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      editor.chain().focus().setImage({ src: reader.result as string }).run()
+    // Build a FormData object - this is how files get sent over HTTP,
+    // NOT as JSON. The field name "image" here must match upload.single("image")
+    // on the backend route exactly, or multer won't find the file.
+    const formData = new FormData()
+    formData.append("image", file)
+
+    setIsUploading(true)
+    try {
+      const { data } = await axiosInstance.post("/upload/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+
+      // data.url is the Cloudinary-hosted URL our backend returned -
+      // insert THIS into the editor, not base64 data
+      editor.chain().focus().setImage({ src: data.url }).run()
+    } catch (err) {
+      console.error("Image upload failed:", err)
+      alert("Image upload failed. Please try again.") // simple feedback for now
+    } finally {
+      setIsUploading(false)
+      e.target.value = "" // reset so selecting the same file again still fires onChange
     }
-    reader.readAsDataURL(file)
-    e.target.value = "" // reset so selecting the same file again still fires onChange
   }
+
 
   return (
     <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[#2D3B2A]/10">
@@ -173,8 +194,13 @@ function EditorToolbar({ editor }: EditorToolbarProps) {
       <div className="w-px h-6 bg-[#2D3B2A]/10 mx-1" />
 
       {/* ── Image upload ── */}
+      
       <ToolbarButton title="Insert image" onClick={() => fileInputRef.current?.click()}>
-        <ImageIcon size={16} />
+        {isUploading ? (
+          <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <ImageIcon size={16} />
+        )}
       </ToolbarButton>
       <input
         ref={fileInputRef}
