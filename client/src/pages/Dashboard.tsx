@@ -13,6 +13,7 @@ import {
   ArrowRight,   // icon for action buttons
 } from "lucide-react"
 
+
 // ── Stat card data — placeholder numbers for now ──────────────────────────────
 const stats = [
   {
@@ -104,6 +105,7 @@ function Dashboard() {
           Here's your progress overview. Keep going — every step counts 🌿
         </p>
       </motion.div>
+
 
       {/* ── Stat cards ── */}
       {/* staggerChildren makes each card animate in one by one */}
