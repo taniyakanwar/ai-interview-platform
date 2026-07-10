@@ -23,6 +23,9 @@ import problemRoutes from "./routes/problem.routes";
 
 import uploadRoutes from "./routes/upload.routes";
 
+import resumeRoutes from "./routes/resume.routes";
+
+
 
 // Create the express app instance
 const app = express();
@@ -59,6 +62,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auth", googleRoutes);
 
 app.use("/api/upload", uploadRoutes);
+
+app.use("/api/resume", resumeRoutes);
+
 
 
 // ─── START SERVER ─────────────────────────────────────────

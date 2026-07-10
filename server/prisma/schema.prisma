@@ -14,6 +14,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  
 }
 
 model User {
@@ -31,6 +32,7 @@ model User {
   createdProblems Problem[]     @relation("UserCreatedProblems")
   problemProgress UserProblem[] @relation("UserProgress")
   notes     Note[]
+  resumes   Resume[]
 
   @@map("users")
 }
@@ -118,4 +120,21 @@ model Note {
 
   @@index([userId])
   @@map("notes")
+}
+
+model Resume {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  fileUrl        String
+  fileName       String
+  extractedText  String   @db.Text
+  targetJD       String?  @db.Text
+  atsScore       Int
+  scoreBreakdown Json
+  missingSkills  String[]
+  suggestions    Json
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
 }
