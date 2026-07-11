@@ -25,7 +25,7 @@ import uploadRoutes from "./routes/upload.routes";
 
 import resumeRoutes from "./routes/resume.routes";
 
-
+import doubtRoutes from "./routes/doubt.routes";
 
 // Create the express app instance
 const app = express();
@@ -64,6 +64,8 @@ app.use("/api/auth", googleRoutes);
 app.use("/api/upload", uploadRoutes);
 
 app.use("/api/resume", resumeRoutes);
+
+app.use("/api/doubts", doubtRoutes);
 
 
 

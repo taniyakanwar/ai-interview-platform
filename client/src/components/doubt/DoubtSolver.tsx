@@ -3,6 +3,7 @@ import { useDoubtSolver } from "@/hooks/useDoubtSolver";
 import DoubtHistorySidebar from "@/components/doubt/DoubtHistorySidebar";
 import DoubtChat from "@/components/doubt/DoubtChat";
 
+
 export default function DoubtSolver() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -34,7 +35,7 @@ export default function DoubtSolver() {
         onToggle={() => setIsSidebarCollapsed((v) => !v)}
         onSelectSession={loadSession}
         onNewChat={startNewChat}
-        onDeleteSession={deleteSession}
+        onDeleteSession={deleteSession} 
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -45,7 +46,7 @@ export default function DoubtSolver() {
         )}
 
         <div className="flex-1 min-h-0 flex justify-center">
-          <div className="w-full max-w-7xl">
+          <div className="w-full max-w-3xl">
             <DoubtChat
               messages={messages}
               isSending={isSending}

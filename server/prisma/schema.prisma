@@ -33,6 +33,7 @@ model User {
   problemProgress UserProblem[] @relation("UserProgress")
   notes     Note[]
   resumes   Resume[]
+  doubtSessions   DoubtSession[]
 
   @@map("users")
 }
@@ -78,6 +79,7 @@ model Problem {
   createdAt     DateTime   @default(now())
 
   userProgress  UserProblem[]
+  doubtSessions DoubtSession[] 
 
   @@map("problems")
   notes         Note[]
@@ -137,4 +139,29 @@ model Resume {
   createdAt      DateTime @default(now())
 
   @@index([userId])
+}
+
+model DoubtSession {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  title         String?       // auto-generated from first message, or "Doubt on: <problem title>"
+  problemId     String?       // nullable — set only when opened from a Coding Practice problem
+  problem       Problem?      @relation(fields: [problemId], references: [id])
+  messages      DoubtMessage[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model DoubtMessage {
+  id          String        @id @default(uuid())
+  sessionId   String
+  session     DoubtSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role        String        // "user" | "model"
+  content     String        @db.Text
+  createdAt   DateTime      @default(now())
+
+  @@index([sessionId])
 }
