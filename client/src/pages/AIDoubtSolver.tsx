@@ -24,6 +24,19 @@ export default function DoubtSolver() {
     loadHistory();
   }, [loadHistory]);
 
+  // NEW: adapter between DoubtChat's (text, image) call shape and
+  // sendMessage's actual (text, problemId, image) shape. Without this,
+  // wiring onSendMessage={sendMessage} directly puts the image into the
+  // problemId slot — a positional-argument mismatch.
+  //
+  // problemId is hardcoded to undefined here because this screen never
+  // opens a session "from a problem" — that would come from a different
+  // entry point later (e.g. a button inside ProblemDetail.tsx) calling
+  // sendMessage with a real problemId directly.
+  function handleSendMessage(text: string, image?: File) {
+    sendMessage(text, undefined, image);
+  }
+
   return (
     <div className="h-screen w-full flex overflow-hidden bg-[#FAF7F2]">
       <DoubtHistorySidebar
@@ -45,11 +58,11 @@ export default function DoubtSolver() {
         )}
 
         <div className="flex-1 min-h-0 flex justify-center">
-          <div className="w-full max-w-7xl">
+          <div className="w-full max-w-9xl">
             <DoubtChat
               messages={messages}
               isSending={isSending}
-              onSendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
             />
           </div>
         </div>

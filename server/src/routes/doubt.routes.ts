@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { protect } from "../middleware/auth.middleware"; // same middleware protecting your resume/notes routes
+import { uploadDoubtImage } from "../middleware/doubtUpload";
 import {
   sendDoubtMessage,
   getDoubtHistory,
@@ -16,7 +17,7 @@ router.use(protect);
 // POST /api/doubts — handles BOTH starting a new session (no sessionId in
 // body) and sending a follow-up (sessionId present). One endpoint, two
 // cases, branched inside the controller — see sendDoubtMessage.
-router.post("/", sendDoubtMessage);
+router.post("/", uploadDoubtImage, sendDoubtMessage);
 
 // GET /api/doubts — sidebar history list (titles only, lightweight)
 router.get("/", getDoubtHistory);

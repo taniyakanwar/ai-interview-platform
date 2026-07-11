@@ -3,7 +3,6 @@ import { useDoubtSolver } from "@/hooks/useDoubtSolver";
 import DoubtHistorySidebar from "@/components/doubt/DoubtHistorySidebar";
 import DoubtChat from "@/components/doubt/DoubtChat";
 
-
 export default function DoubtSolver() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -24,6 +23,22 @@ export default function DoubtSolver() {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  // NEW: adapter between DoubtChat's (text, image) call shape and
+  // sendMessage's actual (text, problemId, image) shape. Without this,
+  // wiring onSendMessage={sendMessage} directly would silently put the
+  // image into the problemId slot — a positional-argument mismatch, not
+  // something either file did "wrong" on its own.
+  //
+  // problemId is hardcoded to undefined here because this screen (the
+  // standalone Doubt Solver page) never opens a session "from a problem"
+  // — that flow, if you build it later, would come from a DIFFERENT
+  // entry point (e.g. a "Ask about this problem" button inside
+  // ProblemDetail.tsx), which would call sendMessage with a real
+  // problemId directly, bypassing this adapter.
+  function handleSendMessage(text: string, image?: File) {
+    sendMessage(text, undefined, image);
+  }
 
   return (
     <div className="h-screen w-full flex overflow-hidden bg-[#FAF7F2]">
@@ -50,7 +65,7 @@ export default function DoubtSolver() {
             <DoubtChat
               messages={messages}
               isSending={isSending}
-              onSendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
             />
           </div>
         </div>

@@ -3,19 +3,17 @@ import api from "@/api/axios";
 // already handled, never attach the Authorization header manually here.
 
 // ---------- TYPES ----------
-// These mirror the exact JSON shapes doubt.controller.ts sends back.
 
 export interface DoubtMessage {
-  id: string;              // UUID, Prisma-generated primary key
-  sessionId: string;       // which session this message belongs to
-  role: "user" | "model";  // "user" = student's question, "model" = Gemini's reply
-  content: string;         // the actual text (student's question OR Gemini's explanation)
-  createdAt: string;       // ISO date string
+  id: string;
+  sessionId: string;
+  role: "user" | "model";
+  content: string;
+  imageUrl: string | null;   // NEW — Cloudinary URL if this message had an attached image, else null
+  createdAt: string;
 }
 
 export interface DoubtSession {
-  // Full session shape, used when loading one conversation's full thread
-  // (matches getDoubtSessionById's response — includes all messages).
   id: string;
   userId: string;
   title: string | null;
@@ -26,9 +24,6 @@ export interface DoubtSession {
 }
 
 export interface DoubtHistoryItem {
-  // Lighter version — matches the `select` clause in getDoubtHistory on
-  // the backend, which deliberately omits the messages array to keep
-  // the sidebar list payload small (same reasoning as ResumeHistoryItem).
   id: string;
   title: string | null;
   problemId: string | null;
@@ -37,11 +32,8 @@ export interface DoubtHistoryItem {
 }
 
 export interface SendMessageResponse {
-  // Shape returned by POST /api/doubts — covers BOTH cases (new session
-  // and follow-up), since the backend's sendDoubtMessage handles both
-  // and returns the same shape either way.
   sessionId: string;
-  title?: string;              // only present on Case 2 (brand new session)
+  title?: string;
   userMessage: DoubtMessage;
   modelMessage: DoubtMessage;
 }
@@ -49,40 +41,62 @@ export interface SendMessageResponse {
 // ---------- API CALLS ----------
 
 export async function sendDoubtMessage(
-  message: string,          // the student's question text
-  sessionId?: string,       // pass this to continue an EXISTING session (a follow-up)
-  problemId?: string        // pass this ONLY when starting a session from a Coding Practice problem
+  message: string,
+  sessionId?: string,
+  problemId?: string,
+  image?: File          // NEW: the raw browser File object, e.g. from an <input type="file"> or a drop event
 ): Promise<SendMessageResponse> {
-  // Plain JSON body — unlike resumeService's analyzeResume, there's no
-  // file involved here, so no FormData/multipart headers needed.
-  //
-  // POST payload sent to server: { message, sessionId?, problemId? }
-  // Response payload received back: { sessionId, title?, userMessage, modelMessage }
-  // — exactly what curl tests printed earlier.
-  const { data } = await api.post<SendMessageResponse>("/doubts", {
-    message,
-    sessionId,
-    problemId,
-  });
+  // No image → keep the old plain-JSON path completely untouched. This
+  // guarantees Day 13's existing text-only flow can't regress from this
+  // change — it's a genuinely separate branch, not a modified one.
+  if (!image) {
+    const { data } = await api.post<SendMessageResponse>("/doubts", {
+      message,
+      sessionId,
+      problemId,
+    });
+    return data;
+  }
+
+  // With an image, the request body MUST be multipart/form-data — that's
+  // the only HTTP-native way to send raw binary bytes alongside regular
+  // text fields in one request. FormData is the browser's built-in way
+  // to build that kind of body.
+  const formData = new FormData();
+
+  // Field name "image" here MUST exactly match upload.single("image")
+  // in doubtUpload.ts on the backend — multer looks for that specific
+  // field name when parsing the multipart body. If these two strings
+  // ever drift apart, req.file will silently stay undefined server-side.
+  formData.append("image", image);
+
+  // Everything else rides along as normal form fields. Note the `if`
+  // guards: FormData has no concept of "undefined" — appending an
+  // undefined sessionId would stringify to the literal text "undefined"
+  // and the backend would see a truthy-looking (but garbage) sessionId.
+  // Skipping the append entirely is the correct way to say "not present."
+  formData.append("message", message);
+  if (sessionId) formData.append("sessionId", sessionId);
+  if (problemId) formData.append("problemId", problemId);
+
+  // IMPORTANT: do NOT manually set a Content-Type header here. Axios
+  // detects a FormData body automatically and sets
+  // "multipart/form-data; boundary=----WebKitFormBoundary..." itself —
+  // that boundary string is randomly generated per request. If you
+  // hardcode "multipart/form-data" yourself without the boundary, multer
+  // on the server won't know where one field's data ends and the next
+  // begins, and the whole parse breaks.
+  const { data } = await api.post<SendMessageResponse>("/doubts", formData);
 
   return data;
 }
 
-
 export async function getDoubtHistory(): Promise<DoubtHistoryItem[]> {
-  // GET request, no payload needed — userId comes from the JWT via `protect` middleware.
-  // Response payload: array of lightweight DoubtHistoryItem objects,
-  // ordered by updatedAt desc (most recently active conversation first —
-  // see getDoubtHistory's orderBy on the backend).
   const { data } = await api.get<DoubtHistoryItem[]>("/doubts");
   return data;
 }
 
 export async function getDoubtSessionById(id: string): Promise<DoubtSession> {
-  // GET request with the session's UUID in the URL path.
-  // Response payload: the FULL DoubtSession object including the entire
-  // messages array — used when a user clicks a past conversation in the
-  // sidebar to load it back into the chat window.
   const { data } = await api.get<DoubtSession>(`/doubts/${id}`);
   return data;
 }

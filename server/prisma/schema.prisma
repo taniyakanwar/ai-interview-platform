@@ -161,6 +161,7 @@ model DoubtMessage {
   session     DoubtSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role        String        // "user" | "model"
   content     String        @db.Text
+  imageUrl    String?
   createdAt   DateTime      @default(now())
 
   @@index([sessionId])

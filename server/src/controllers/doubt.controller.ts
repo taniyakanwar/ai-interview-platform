@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { getDoubtResponse, ChatTurn } from "../utils/doubtAi";
-
+import { uploadImageToCloudinary } from "../utils/cloudinaryUpload"; // NEW: Cloudinary helper for problem-image uploads
 
 // Builds a short, readable session title from the first message — shown
 // in the sidebar list, like ChatGPT auto-titling a new conversation.
@@ -18,6 +18,10 @@ function generateTitle(firstMessage: string, problemTitle?: string): string {
  * existing one — because we chose lazy creation, there's no separate
  * "create empty session" step. The frontend just calls this every time
  * the student hits send; whether sessionId is present tells us which case we're in.
+ *
+ * UPDATED: now also accepts an optional uploaded image (req.file, set by
+ * the uploadDoubtImage multer middleware in doubt.routes.ts). A message
+ * can be text-only, image-only, or both.
  */
 export async function sendDoubtMessage(req: Request, res: Response) {
   try {
@@ -28,8 +32,39 @@ export async function sendDoubtMessage(req: Request, res: Response) {
 
     const { message, sessionId, problemId } = req.body;
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ message: "Message is required" });
+    // req.file is populated by multer if an image was attached to this
+    // request. It's undefined for a plain text message — multer doesn't
+    // throw when .single() finds no file, it just leaves this unset.
+    const imageFile = req.file;
+
+    // CHANGED validation: previously this rejected any request without a
+    // non-empty `message`. Now a request is valid if it has typed text,
+    // an attached image, or both — a photo with no caption is a valid
+    // "here's my problem" message on its own.
+    const hasText = typeof message === "string" && message.trim().length > 0;
+    const hasImage = !!imageFile;
+
+    if (!hasText && !hasImage) {
+      return res
+        .status(400)
+        .json({ message: "Message text or an image is required" });
+    }
+
+    // Normalize to a plain string so every downstream use (DB insert,
+    // Gemini call, title generation) can treat "no text" as "" instead
+    // of having to special-case undefined everywhere.
+    const messageText = hasText ? message.trim() : "";
+
+    // Upload to Cloudinary BEFORE calling Gemini and BEFORE any DB write.
+    // If the upload fails, we want to bail out immediately — not after
+    // burning a Gemini API call on your free-tier quota, and not after
+    // half-writing a session/message row.
+    let imageUrl: string | undefined;
+    if (imageFile) {
+      imageUrl = await uploadImageToCloudinary(
+        imageFile.buffer,
+        "nook/doubt-images" // separate Cloudinary folder from resumes/notes
+      );
     }
 
     // ---- CASE 1: continuing an existing session (a follow-up question) ----
@@ -49,7 +84,10 @@ export async function sendDoubtMessage(req: Request, res: Response) {
         return res.status(404).json({ message: "Doubt session not found" });
       }
 
-      // Reshape DB rows into the {role, content} shape doubtAi.ts expects
+      // Reshape DB rows into the {role, content} shape doubtAi.ts expects.
+      // NOTE: we intentionally do NOT re-attach old imageUrls here — see
+      // the doubtAi.ts step for why re-sending old images on every
+      // follow-up would waste tokens/quota for no real benefit.
       const history: ChatTurn[] = session.messages.map((m) => ({
         role: m.role as "user" | "model",
         content: m.content,
@@ -58,7 +96,17 @@ export async function sendDoubtMessage(req: Request, res: Response) {
       // No problemContext here — that only gets injected on the FIRST
       // message of a session (see Case 2). By now it's already baked
       // into the history from that first exchange.
-      const reply = await getDoubtResponse(history, message);
+      //
+      // UPDATED: pass the new image (if any) as a 4th argument — signature
+      // change happens in doubtAi.ts next.
+      const reply = await getDoubtResponse(
+        history,
+        messageText,
+        undefined,
+        imageUrl
+          ? { buffer: imageFile!.buffer, mimeType: imageFile!.mimetype }
+          : undefined
+      );
 
       // Save both the student's new message and Gemini's reply as two
       // new rows — $transaction ensures either BOTH get saved or
@@ -66,7 +114,12 @@ export async function sendDoubtMessage(req: Request, res: Response) {
       // hiccups between the two inserts).
       const [userMsg, modelMsg] = await prisma.$transaction([
         prisma.doubtMessage.create({
-          data: { sessionId: session.id, role: "user", content: message },
+          data: {
+            sessionId: session.id,
+            role: "user",
+            content: messageText,
+            imageUrl: imageUrl ?? null, // NEW — null when no image was sent
+          },
         }),
         prisma.doubtMessage.create({
           data: { sessionId: session.id, role: "model", content: reply },
@@ -107,8 +160,24 @@ export async function sendDoubtMessage(req: Request, res: Response) {
       // a missing/stale problemId shouldn't block the student from asking their question.
     }
 
-    const reply = await getDoubtResponse([], message, problemContext);
-    const title = generateTitle(message, problemTitle);
+    // UPDATED: pass the image along on the first message too.
+    const reply = await getDoubtResponse(
+      [],
+      messageText,
+      problemContext,
+      imageUrl
+        ? { buffer: imageFile!.buffer, mimeType: imageFile!.mimetype }
+        : undefined
+    );
+
+    // UPDATED title logic: generateTitle(messageText, ...) would produce
+    // an awkward blank title if the student uploaded ONLY an image with
+    // no caption — messageText would be "". Handle that explicitly.
+    const title = problemTitle
+      ? `Doubt on: ${problemTitle}`
+      : messageText
+      ? generateTitle(messageText)
+      : "Doubt on uploaded image"; // NEW fallback for image-only first message
 
     // Create the session AND its first two messages together as one
     // transaction — this is the moment the "empty session" actually
@@ -120,7 +189,11 @@ export async function sendDoubtMessage(req: Request, res: Response) {
         problemId: problemId || null,
         messages: {
           create: [
-            { role: "user", content: message },
+            {
+              role: "user",
+              content: messageText,
+              imageUrl: imageUrl ?? null, // NEW
+            },
             { role: "model", content: reply },
           ],
         },
@@ -144,6 +217,7 @@ export async function sendDoubtMessage(req: Request, res: Response) {
 
 // Sidebar list — same lightweight-select pattern as getResumeHistory,
 // no need to send full message threads just to render a list of titles.
+// UNCHANGED.
 export async function getDoubtHistory(req: Request, res: Response) {
   try {
     const userId = req.user?.userId;
@@ -169,7 +243,9 @@ export async function getDoubtHistory(req: Request, res: Response) {
 }
 
 // Full thread — called when clicking a session in the sidebar, to load
-// the whole conversation back into the chat window.
+// the whole conversation back into the chat window. UNCHANGED — imageUrl
+// on each message comes through automatically since it's just a column
+// on DoubtMessage, no query changes needed here.
 export async function getDoubtSessionById(req: Request, res: Response) {
   try {
     const userId = req.user?.userId;
@@ -191,6 +267,7 @@ export async function getDoubtSessionById(req: Request, res: Response) {
   }
 }
 
+// UNCHANGED.
 export async function deleteDoubtSession(req: Request, res: Response) {
   try {
     const userId = req.user?.userId;
