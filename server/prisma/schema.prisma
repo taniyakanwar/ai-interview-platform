@@ -34,7 +34,7 @@ model User {
   notes     Note[]
   resumes   Resume[]
   doubtSessions   DoubtSession[]
-
+  roadmaps        Roadmap[]
   @@map("users")
 }
 
@@ -165,4 +165,92 @@ model DoubtMessage {
   createdAt   DateTime      @default(now())
 
   @@index([sessionId])
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Roadmap {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // --- snapshot of the inputs used to generate this roadmap ---
+  // Stored (not just used transiently) so that if the user looks at an old
+  // roadmap in their history, they can see WHAT they asked for, and so we
+  // can support "regenerate with same inputs" later without re-asking.
+  targetRole      String
+  skillLevel      SkillLevel
+  timelineWeeks   Int              // total weeks this roadmap spans, e.g. 12
+  targetCompanies String[]         // empty array if user left it blank
+  weakTopics      String[]         // the tags they confirmed before generating (from Coding Practice/Resume, editable)
+
+  // --- which roadmap is currently "checked out" ---
+  // Only one Roadmap per user should have isActive = true at a time.
+  // Enforced in application code (Prisma can't do "unique where true" easily
+  // across Postgres without a partial index migration) — the roadmap
+  // controller will handle flipping the old active one to false.
+  isActive        Boolean    @default(true)
+
+  weeks           RoadmapWeek[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([userId])
+  @@map("roadmaps")
+}
+
+model RoadmapWeek {
+  id          String        @id @default(uuid())
+  roadmapId   String
+  roadmap     Roadmap       @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  weekNumber  Int           // 1-indexed, used for ordering and the "Week 1" label
+  theme       String        // short label for the graph node, e.g. "Arrays & Strings"
+  description String?       @db.Text  // longer blurb shown when the week is expanded
+
+  days        RoadmapDay[]
+
+  // A roadmap can't have two "Week 3"s — guards against a buggy Gemini
+  // response accidentally creating duplicate week numbers.
+  @@unique([roadmapId, weekNumber])
+  @@index([roadmapId])
+  @@map("roadmap_weeks")
+}
+
+model RoadmapDay {
+  id         String        @id @default(uuid())
+  weekId     String
+  week       RoadmapWeek   @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  dayNumber  Int           // 1-7 within that week
+  focus      String        // e.g. "Two Pointers Pattern" — shown as the day's title in the accordion
+
+  tasks      RoadmapTask[]
+
+  @@unique([weekId, dayNumber])
+  @@index([weekId])
+  @@map("roadmap_days")
+}
+
+model RoadmapTask {
+  id          String     @id @default(uuid())
+  dayId       String
+  day         RoadmapDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  content     String     @db.Text   // e.g. "Solve 3 two-pointer problems from Coding Practice"
+  resourceUrl String?               // optional external link (article, LeetCode tag, video)
+
+  // The actual tracker state. completedAt (not just a boolean) lets us later
+  // build a streak/activity view on the Profile page for free, without a
+  // schema change — same reasoning as UserProblem.lastSolved.
+  isCompleted Boolean    @default(false)
+  completedAt DateTime?
+
+  @@index([dayId])
+  @@map("roadmap_tasks")
 }

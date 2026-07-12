@@ -27,6 +27,8 @@ import resumeRoutes from "./routes/resume.routes";
 
 import doubtRoutes from "./routes/doubt.routes";
 
+import roadmapRoutes from "./routes/roadmap.routes"
+
 // Create the express app instance
 const app = express();
 
@@ -66,6 +68,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/resume", resumeRoutes);
 
 app.use("/api/doubts", doubtRoutes);
+
+app.use("/api/roadmap", roadmapRoutes);
 
 
 

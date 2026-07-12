@@ -1,15 +1,21 @@
+// src/services/roadmapAi.ts
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// ---- Input shape: everything the user confirmed on the generate form ----
 export interface RoadmapGenerationInput {
   targetRole: string;
   skillLevel: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   timelineWeeks: number;
-  targetCompanies: string[];
-  weakTopics: string[];
+  targetCompanies: string[];   // [] if left blank
+  weakTopics: string[];        // pulled from Coding Practice + Resume, user-edited
 }
 
+// ---- Output shape: mirrors the Prisma models 1:1 (minus DB-only fields
+// like id/roadmapId/isCompleted) so the controller can map this straight
+// into nested `create` calls without reshaping anything. ----
 export interface GeneratedTask {
   content: string;
   resourceUrl?: string;
@@ -32,7 +38,10 @@ export interface GeneratedRoadmap {
   weeks: GeneratedWeek[];
 }
 
-const SYSTEM_INSTRUCTION = `You are an expert technical interview prep coach who designs structured, week-by-week study roadmaps for CS students preparing for SDE (Software Development Engineer) interviews.
+// Same pattern as doubtAi.ts's SYSTEM_INSTRUCTION — the "personality" and
+// hard rules live here once, rather than getting rebuilt into the prompt
+// string every call.
+const SYSTEM_INSTRUCTION = `You are an expert technical interview prep coach who designs structured, week-by-week study roadmaps for CS students preparing for SDE (Software Development Engineer) interviews and other tech related job roles.
 
 Rules:
 - Build a roadmap that spans EXACTLY the number of weeks requested — no more, no fewer.
@@ -46,6 +55,10 @@ Rules:
 - Only include a resourceUrl when you are confident it is a real, well-known, generally stable resource (e.g. official docs, GeeksforGeeks, LeetCode topic tags). If unsure, omit it rather than guessing a URL.
 - Do not include any text outside the JSON structure — no preamble, no markdown fences, no closing remarks.`;
 
+
+// Native structured-output schema. This is what actually enforces valid,
+// parseable JSON — the SYSTEM_INSTRUCTION above shapes CONTENT quality,
+// this schema shapes STRUCTURE validity. Belt and suspenders.
 const roadmapSchema = {
   type: Type.OBJECT,
   properties: {
@@ -87,36 +100,13 @@ const roadmapSchema = {
   required: ["weeks"],
 };
 
-// NEW: wraps the raw Gemini call with a single automatic retry, but
-// ONLY for genuinely transient network failures (DNS blip, connection
-// reset) — not for bad requests or anything that would fail identically
-// a second time. This is what fixes the ENOTFOUND/ECONNRESET failures
-// seen on longer (9+ week) generations, which just take Gemini longer
-// to respond to and give more of a window for a network hiccup.
-async function callGeminiWithRetry(prompt: string, config: any, attempt = 1): Promise<any> {
-  try {
-    return await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config,
-    });
-  } catch (err) {
-    const cause = (err as any)?.cause;
-    const isNetworkError =
-      err instanceof Error &&
-      (err.message.includes("fetch failed") ||
-        cause?.code === "ENOTFOUND" ||
-        cause?.code === "ECONNRESET");
-
-    if (isNetworkError && attempt < 2) {
-      console.warn(`Gemini network error, retrying (attempt ${attempt + 1})...`);
-      await new Promise((r) => setTimeout(r, 1500));
-      return callGeminiWithRetry(prompt, config, attempt + 1);
-    }
-    throw err;
-  }
-}
-
+/**
+ * Generates a full multi-week prep roadmap in one call. Returns plain data
+ * only — this function never touches Prisma. The controller is responsible
+ * for taking this and creating the Roadmap/RoadmapWeek/RoadmapDay/RoadmapTask
+ * rows, same separation of concerns as getDoubtResponse() vs. the doubt
+ * controller.
+ */
 export async function generateRoadmap(
   input: RoadmapGenerationInput
 ): Promise<GeneratedRoadmap> {
@@ -136,22 +126,39 @@ ${companiesLine}
 ${weakTopicsLine}`;
 
   try {
-    const response = await callGeminiWithRetry(prompt, {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: roadmapSchema,
-      maxOutputTokens: 32768,
-      temperature: 0.6,
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: roadmapSchema,
+        // Raised well above the default — a full multi-week roadmap is a
+        // genuinely large JSON payload, and a truncated response means
+        // JSON.parse throws below. Gemini 2.5 Flash supports up to 65536.
+        maxOutputTokens: 32768,
+        // Lower temperature than a conversational feature like Doubt
+        // Solver — we want a consistent, well-structured plan, not
+        // creative variation between regenerations.
+        temperature: 0.6,
+      },
     });
 
     if (!response.text) {
       throw new Error("Gemini returned no content for roadmap generation");
     }
 
+    // With responseSchema set, Gemini should never wrap this in markdown
+    // fences — but we still wrap in try/catch below in case of a truncated
+    // or malformed response, rather than letting it crash the request.
     const parsed: GeneratedRoadmap = JSON.parse(response.text);
     return parsed;
   } catch (err) {
     console.error("Gemini roadmap generation failed:", err);
+    // Re-throw (unlike doubtAi.ts, which swallows errors into a friendly
+    // string) — a roadmap is a bigger, DB-persisted operation, so the
+    // controller needs to know generation failed and respond with a
+    // proper error status, not silently save a broken/empty roadmap.
     throw new Error("Failed to generate roadmap. Please try again.");
   }
 }
