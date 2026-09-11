@@ -38,8 +38,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ─── MIDDLEWARE ───────────────────────────────────────────
-// Enable CORS so React frontend can make requests to this backend
-app.use(cors());
+// Enable CORS, but only for a specific allowed origin instead of everyone.
+// CORS_ORIGIN comes from an env var so it can be your live frontend URL in
+// production, while still falling back to Vite's local dev address (5173)
+// so nothing breaks when you're just running things on your own machine.
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  })
+);
 
 // Parse incoming JSON request bodies — without this, req.body would be undefined
 app.use(express.json());
