@@ -35,6 +35,7 @@ model User {
   resumes   Resume[]
   doubtSessions   DoubtSession[]
   roadmaps        Roadmap[]
+  interviewSessions InterviewSession[]
   @@map("users")
 }
 
@@ -253,4 +254,142 @@ model RoadmapTask {
 
   @@index([dayId])
   @@map("roadmap_tasks")
+}
+
+
+
+// Interview Simulator  
+
+enum InterviewPersona {
+  FRIENDLY        // Ava — patient, offers hints, "take your time"
+  FAANG           // Noah — terse, minimal reactions, sharper follow-ups
+  HIRING_MANAGER  // Claire — behavioral-heavy, probes leadership/communication
+}
+
+enum DurationPreset {
+  QUICK     // ~15 min, 4 main questions
+  STANDARD  // ~30 min, 7 main questions
+  EXTENDED  // ~45 min, 10 main questions
+}
+
+enum SessionSectionType {
+  INTRO
+  RESUME
+  BEHAVIORAL
+  TECHNICAL
+  CODING
+  CLOSING
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED   // user closed the tab mid-session — lets us distinguish this from a real completed report
+}
+
+enum InputMode {
+  VOICE
+  TEXT   // used for CODING-section turns, where dictating code isn't practical
+}
+
+enum TurnDecision {
+  FOLLOW_UP     // Gemini wants to dig deeper on the same question thread
+  NEXT_SECTION  // move on to the next question/section
+  COMPLETE      // this was the final turn — session is ready for final aggregation
+}
+
+model InterviewSession {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // --- snapshot of session setup, same philosophy as Roadmap's stored inputs ---
+  targetRole     String
+  skillLevel     SkillLevel        // reusing the enum from Roadmap — same meaning, no need to duplicate it
+  persona        InterviewPersona
+  durationPreset DurationPreset
+  questionBudget Int               // resolved main-question count for the chosen preset, e.g. 7
+
+  // Fresh resume upload for THIS session only — deliberately not a relation
+  // to the Day 12 Resume model. See explanation above.
+  resumeFileName String?
+  resumeText     String? @db.Text
+
+  // Ordered section plan decided once at session start, e.g.
+  // [{"type":"INTRO","count":1},{"type":"TECHNICAL","count":4}, ...]
+  sectionPlan Json
+
+  status SessionStatus @default(IN_PROGRESS)
+
+  // --- final aggregate scores + narrative feedback ---
+  // Null while IN_PROGRESS, filled in by the final Gemini call once the
+  // session completes.
+  overallScore        Float?
+  communicationScore  Float?
+  codingScore         Float?
+  confidenceScore     Float?
+  problemSolvingScore Float?
+  behavioralScore     Float?
+  overallFeedback     String?  @db.Text
+  strengths           String[]
+  improvementAreas    String[]
+
+  turns InterviewTurn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("interview_sessions")
+}
+
+model InterviewTurn {
+  id        String           @id @default(uuid())
+  sessionId String
+  session   InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  sectionType SessionSectionType
+  order       Int                 // absolute position in the session, drives replay/history ordering
+
+  questionText String    @db.Text
+  inputMode    InputMode
+
+  isFollowUp   Boolean         @default(false)
+  parentTurnId String?
+  parentTurn   InterviewTurn?  @relation("TurnFollowUps", fields: [parentTurnId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  followUps    InterviewTurn[] @relation("TurnFollowUps")
+
+  transcript String? @db.Text  // null until the user actually answers
+
+  // --- speech-pattern metrics, computed by US from SpeechRecognition timing
+  // data, not by Gemini. Null for TEXT-mode (CODING) turns — no voice to
+  // measure there. These feed confidenceScore alongside Gemini's linguistic
+  // read of hedging language in the transcript. See interviewAi.ts (next file).
+  hesitationMs    Int?
+  durationMs      Int?
+  wordCount       Int?
+  wpm             Float?
+  fillerWordCount Int?
+  longPauseCount  Int?
+
+  // --- per-turn scoring, filled in right after the answer is submitted ---
+  technicalScore     Float?
+  communicationScore Float?
+  confidenceScore    Float?
+
+  // Live notes — short strings for the "quietly writes ✔/⚠" report feature.
+  // Invisible during the session, surfaced only on the end report.
+  positives String[]
+  concerns  String[]
+
+  // CODING turns only: syntax issues Gemini spotted but deliberately did
+  // NOT factor into technicalScore (logic/approach only, per your request).
+  syntaxNotes String? @db.Text
+
+  geminiDecision TurnDecision?
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("interview_turns")
 }

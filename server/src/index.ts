@@ -29,6 +29,8 @@ import doubtRoutes from "./routes/doubt.routes";
 
 import roadmapRoutes from "./routes/roadmap.routes"
 
+import interviewRoutes from "./routes/interview.routes"
+
 // Create the express app instance
 const app = express();
 
@@ -71,7 +73,7 @@ app.use("/api/doubts", doubtRoutes);
 
 app.use("/api/roadmap", roadmapRoutes);
 
-
+app.use("/api/interview", interviewRoutes);
 
 // ─── START SERVER ─────────────────────────────────────────
 app.listen(PORT, () => {
