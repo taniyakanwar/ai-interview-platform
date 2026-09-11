@@ -2,11 +2,18 @@ import axios from "axios";
 
 // Why a shared instance instead of calling axios.get() everywhere:
 // 1. One place to set the base URL — if your backend URL changes
-//    (e.g. Railway deployment vs localhost:5000), you edit ONE line, not every file.
+//    (e.g. Render deployment vs localhost:5000), you edit ONE line, not every file.
 // 2. One place to attach the JWT token — without this, every single
 //    service file would need to manually read the token and set headers.
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // will become an env var later, hardcoded for now to keep this step focused
+  // import.meta.env.VITE_API_URL is Vite's way of reading environment variables
+  // in frontend code. Vite ONLY exposes vars prefixed with VITE_ to the browser
+  // bundle — that's a safety guard so you never accidentally ship a server
+  // secret (like JWT_SECRET) into your public frontend build.
+  // On Render, we'll set VITE_API_URL to your live backend URL.
+  // Locally, if that env var isn't set, it falls back to localhost — so your
+  // dev workflow doesn't change at all.
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
 });
 
 // Request interceptor = a checkpoint that runs BEFORE every request leaves the app.
